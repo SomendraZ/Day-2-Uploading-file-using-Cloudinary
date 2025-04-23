@@ -28,10 +28,10 @@ const upload = multer({ storage });
 
 // File Upload API
 router.post("/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+  const localFilePath = req.file.path;
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-    const result = await cloudinary.uploader.upload(req.file.path);
+    const result = await cloudinary.uploader.upload(localFilePath);
 
     const newUpload = new Upload({ url: result.secure_url });
     await newUpload.save();
@@ -39,6 +39,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     res.json({ url: result.secure_url });
   } catch (error) {
     res.status(500).json({ error: "Upload failed" });
+  } finally {
+    fs.unlink(localFilePath, (err) => {
+      if (err) console.error("Failed to delete local file:", err);
+    });
   }
 });
 
